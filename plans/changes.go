@@ -23,6 +23,10 @@ func NewChanges() *Changes {
 	}
 }
 
+func (c *Changes) Empty() bool {
+	return (len(c.Resources) + len(c.RootOutputs)) == 0
+}
+
 // ResourceInstanceChange describes a change to a particular resource instance
 // object.
 type ResourceInstanceChange struct {

@@ -2,6 +2,8 @@ package terraform
 
 import (
 	"github.com/hashicorp/terraform/addrs"
+	"github.com/hashicorp/terraform/plans"
+	"github.com/hashicorp/terraform/states"
 )
 
 // NodePlanDestroyableResourceInstance represents a resource that is ready
@@ -32,34 +34,31 @@ func (n *NodePlanDestroyableResourceInstance) DestroyAddr() *addrs.AbsResourceIn
 func (n *NodePlanDestroyableResourceInstance) EvalTree() EvalNode {
 	addr := n.ResourceInstanceAddr()
 
-	// State still uses legacy-style internal ids, so we need to shim to get
-	// a suitable key to use.
-	stateId := NewLegacyResourceInstanceAddress(addr).stateId()
-
 	// Declare a bunch of variables that are used for state during
-	// evaluation. Most of this are written to by-address below.
-	var diff *InstanceDiff
-	var state *InstanceState
+	// evaluation. These are written to by address in the EvalNodes we
+	// declare below.
+	var change *plans.ResourceInstanceChange
+	var state *states.ResourceInstanceObject
 
 	return &EvalSequence{
 		Nodes: []EvalNode{
 			&EvalReadState{
-				Name:   stateId,
+				Addr:   addr.Resource,
 				Output: &state,
 			},
 			&EvalDiffDestroy{
 				Addr:   addr.Resource,
 				State:  &state,
-				Output: &diff,
+				Output: &change,
 			},
 			&EvalCheckPreventDestroy{
 				Addr:   addr.Resource,
 				Config: n.Config,
-				Diff:   &diff,
+				Change: &change,
 			},
 			&EvalWriteDiff{
-				Name: stateId,
-				Diff: &diff,
+				Addr:   addr.Resource,
+				Change: &change,
 			},
 		},
 	}
